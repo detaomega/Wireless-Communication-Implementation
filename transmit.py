@@ -43,7 +43,7 @@ def main():
     alpha = DEFAULT_ALPHA
     usrp_addr = DEFAULT_USRP_TX_ADDR
     antenna = DEFAULT_ANTENNA
-    message = "HELLO TX"  # Message to transmit
+    message = "Hello World USRP work Successfully"  # Message to transmit
     
     print("=" * 60)
     print("PACKET-BASED QPSK TRANSMITTER WITH HAMMING CODE")
