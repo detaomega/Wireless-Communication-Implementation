@@ -24,16 +24,21 @@ class PacketProtocol:
         return {
             'preamble_bits': len(PacketProtocol.PREAMBLE),
             'start_marker_bits': len(PacketProtocol.START_MARKER),
-            'header_bits': PacketProtocol.HEADER_LENGTH * 14,  # 14 bits per byte with Hamming
+            'header_bits': PacketProtocol.HEADER_LENGTH * 8,
             'end_marker_bits': len(PacketProtocol.END_MARKER),
-            'min_payload_bits': PacketProtocol.MIN_PAYLOAD_LENGTH * 14,
-            'max_payload_bits': PacketProtocol.MAX_PAYLOAD_LENGTH * 14
+            'min_payload_bits': PacketProtocol.MIN_PAYLOAD_LENGTH * 8,
+            'max_payload_bits': PacketProtocol.MAX_PAYLOAD_LENGTH * 8
         }
+
+def bytes_to_bit_array(byte_data):
+        """Converts a byte string to a numpy array of bits."""
+        return np.unpackbits(np.frombuffer(byte_data, dtype=np.uint8))
 
 class PacketBuilder:
     """Build packets with preamble, header, payload, and end marker"""
     
     def __init__(self):
+        pass ## No HammingEncoder
         self.hamming = HammingEncoder()
     
     def create_header(self, payload_length, sequence_number=0):
@@ -64,7 +69,8 @@ class PacketBuilder:
         
         # Create header
         header_bytes = self.create_header(len(payload_bytes), sequence_number)
-        
+        header_bits = bytes_to_bit_array(header_bytes)
+        payload_bits = bytes_to_bit_array(payload_bytes)
         # Encode header and payload with Hamming code
         encoded_header = self.hamming.encode_bytes(header_bytes)
         encoded_payload = self.hamming.encode_bytes(payload_bytes)
@@ -73,8 +79,8 @@ class PacketBuilder:
         packet_bits = np.concatenate([
             PacketProtocol.PREAMBLE,
             PacketProtocol.START_MARKER,
-            encoded_header,
-            encoded_payload,
+            header_bits,
+            payload_bits,
             PacketProtocol.END_MARKER
         ])
         

@@ -22,6 +22,17 @@ class PacketDecoder:
         # For packet search
         self.bit_buffer = deque(maxlen=1000)  # Circular buffer for incoming bits
         self.packets_received = 0
+    def _bits_to_bytes(self, bits):
+        """Helper function to convert a NumPy array of bits into bytes."""
+        byte_list = []
+        for i in range(0, len(bits), 8):
+            if i + 8 <= len(bits):
+                byte_chunk = bits[i:i+8]
+                byte_val = 0
+                for bit in byte_chunk:
+                    byte_val = (byte_val << 1) | bit
+                byte_list.append(byte_val)
+        return bytes(byte_list)
     
     def find_pattern(self, data, pattern, max_errors=0):
         """Find pattern in data array with strict matching"""
@@ -72,8 +83,8 @@ class PacketDecoder:
     def try_decode_packet(self):
         """Try to decode a packet from the current bit buffer"""
         min_packet_size = (len(self.PREAMBLE) + len(self.START_MARKER) + 
-                          PacketProtocol.HEADER_LENGTH * 14 + 
-                          PacketProtocol.MIN_PAYLOAD_LENGTH * 14 + 
+                          PacketProtocol.HEADER_LENGTH * 8 + 
+                          PacketProtocol.MIN_PAYLOAD_LENGTH * 8 + 
                           len(self.END_MARKER))
         
         if len(self.bit_buffer) < min_packet_size:
@@ -104,14 +115,14 @@ class PacketDecoder:
         
         # Try to decode header (4 bytes = 56 encoded bits)
         header_start = expected_start_pos + len(self.START_MARKER)
-        header_end = header_start + PacketProtocol.HEADER_LENGTH * 14
+        header_end = header_start + PacketProtocol.HEADER_LENGTH * 8
         
         if header_end > len(buffer_array):
             return None  # Not enough data for header
         
         header_bits = buffer_array[header_start:header_end]
         try:
-            header_bytes, header_errors = self.hamming.decode_bytes(header_bits)
+            header_bytes = self._bits_to_bytes(header_bits)
             if len(header_bytes) < PacketProtocol.HEADER_LENGTH:
                 return None
             
@@ -129,7 +140,7 @@ class PacketDecoder:
                 return None
             
             # Calculate expected payload encoded length
-            payload_encoded_length = payload_length * 14  # Each byte becomes 14 bits with Hamming encoding
+            payload_encoded_length = payload_length * 8  # Each byte becomes 14 bits with Hamming encoding
             
             # Check if we have enough data for the complete packet
             payload_start = header_end
@@ -142,7 +153,7 @@ class PacketDecoder:
             
             # Decode payload
             payload_bits = buffer_array[payload_start:payload_end]
-            payload_bytes, payload_errors = self.hamming.decode_bytes(payload_bits)
+            payload_bytes = self._bits_to_bytes(payload_bits)
             
             # Check end marker (require perfect match)
             end_marker_data = buffer_array[end_marker_start:end_marker_end]
@@ -167,8 +178,6 @@ class PacketDecoder:
                 'sequence_number': sequence_number,
                 'payload_length': payload_length,
                 'payload': payload_bytes,
-                'header_errors': header_errors,
-                'payload_errors': payload_errors,
                 'total_packet_bits': end_marker_end - preamble_pos,
                 'packet_number': self.packets_received
             }

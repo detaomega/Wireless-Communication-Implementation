@@ -38,13 +38,14 @@ class HammingEncoder:
             low_nibble = [(byte >> (3-i)) & 1 for i in range(4)]   # bits 3,2,1,0
             
             # Encode each nibble
-            encoded_high = self.encode_4bits(high_nibble)
-            encoded_low = self.encode_4bits(low_nibble)
+            # encoded_high = self.encode_4bits(high_nibble)
+            # encoded_low = self.encode_4bits(low_nibble)
             
             # Add to result
-            encoded_bits.extend(encoded_high)
-            encoded_bits.extend(encoded_low)
+            encoded_bits.extend(high_nibble)
+            encoded_bits.extend(low_nibble)
         
+        print (encoded_bits)
         return np.array(encoded_bits, dtype=np.uint8)
 
 class HammingDecoder:
